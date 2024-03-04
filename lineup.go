@@ -5,12 +5,17 @@ import (
 	"golang.org/x/net/html"
 )
 
+type Artist struct {
+	Name string `json:"name"`
+	Img string `json:"img"`
+}
+
 type Lineup struct {
-	Artists []string `json:"artists"`
+	Artists []Artist `json:"artists"`
 	Size    int      `json:"size"`
 }
 
-// ParseLineup takes in an io.Reader and outputs the Lineup or error
+// ParseLineup takes in raw html bytes and outputs the Lineup or errors out
 //
 // example node:
 // <div class="favorite-item">
@@ -24,10 +29,10 @@ type Lineup struct {
 //         <img src="/wp-content/assets/splashpages/app-sharing/lineup/img/heart.svg" alt="heart">
 //     </div> -->
 // </div>
-func ParseLineup(reader []byte) (Lineup, error) {
+func ParseLineup(rawHTML []byte) (Lineup, error) {
 	var lineup Lineup
 
-	buff := bytes.NewBuffer(reader)
+	buff := bytes.NewBuffer(rawHTML)
 
 	doc, err := html.Parse(buff)
 
@@ -38,20 +43,15 @@ func ParseLineup(reader []byte) (Lineup, error) {
 	var f func(*html.Node)
 
 	f = func(n *html.Node) {
-		// if n.Type == html.ElementNode && n.Data == "a" {
 		if n.Type == html.ElementNode && n.Data == "div" {
 			for _, a := range n.Attr {
+
 				if a.Key == "class" && a.Val == "favorite-item" {
 
-					// if (n.FirstChild.Type == html.ElementNode && n.FirstChild.NextSibling.Type == html.ElementNode ) {
-						// imgNode := n.FirstChild.NextSibling
-						// divFavItem := imgNode.NextSibling.NextSibling
-						// h4Headline := divFavItem.FirstChild.NextSibling
-						// log.Println(h4Headline.FirstChild.Data)
-						// if (n.FirstChild.Type == html.ElementNode ) {
-							// log.Println(getArtist(n.FirstChild.NextSibling))
-							// }
-						artist := getFromArtistParentNode(n)
+						artist := Artist{
+							Name: getArtist(n),
+							Img: getArtistImg(n),
+						}
 
 						lineup.Artists = append(lineup.Artists, artist)
 						lineup.Size += 1
@@ -72,7 +72,7 @@ func ParseLineup(reader []byte) (Lineup, error) {
 }
 
 // return empty string if not found
-func getFromArtistParentNode(n *html.Node) string {
+func getArtist(n *html.Node) string {
 	imgNode := n.FirstChild.NextSibling
 
 	if imgNode == nil {
@@ -98,4 +98,30 @@ func getFromArtistParentNode(n *html.Node) string {
 	}
 
 	return artist.Data
+}
+
+func getArtistImg(n *html.Node) string {
+	imgSrc := ""
+
+	if n == nil || n.FirstChild == nil {
+		return imgSrc
+	}
+
+	if n.FirstChild.NextSibling == nil {
+		return imgSrc
+	}
+
+	imgNode := n.FirstChild.NextSibling
+
+	for _, attr := range imgNode.Attr {
+		if attr.Key != "src" {
+			continue
+		}
+
+		imgSrc = attr.Val
+
+		break
+	}
+
+	return imgSrc
 }
