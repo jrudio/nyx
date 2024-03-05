@@ -2,6 +2,9 @@ package nyx
 
 import (
 	"bytes"
+	"io"
+	"net/http"
+
 	"golang.org/x/net/html"
 )
 
@@ -13,6 +16,36 @@ type Artist struct {
 type Lineup struct {
 	Artists []Artist `json:"artists"`
 	Size    int      `json:"size"`
+}
+
+// Get()
+//
+// Get returns the artists listed at the given url
+//
+// Parameters:
+// - url (string): URL to the favorited artists from the Insomniac app. Example: https://insom.app/<unique-id>
+//
+// Returns:
+// - Lineup: Returns the artists listed at the Insomniac URL
+// - error: Is nil if request and parsing is successful
+func Get(url string) (Lineup, error) {
+	var lineup Lineup
+
+	resp, err := http.Get(url)
+
+	if err != nil {
+		return lineup, err
+	}
+
+	defer resp.Body.Close();
+
+	body, err := io.ReadAll(resp.Body)
+
+	if err != nil {
+		return lineup, err
+	}
+
+	return ParseLineup(body)
 }
 
 // ParseLineup takes in raw html bytes and outputs the Lineup or errors out
