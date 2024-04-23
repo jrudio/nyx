@@ -53,7 +53,7 @@ func main() {
 }
 
 func printLineup(lineup nyx.Lineup) {
-		if lineup.Size < 1 {
+	if lineup.Size < 1 {
 		log.Println("did not find any artists at the given url or html file")
 
 		return
@@ -64,6 +64,6 @@ func printLineup(lineup nyx.Lineup) {
 	for i := 0; i < lineup.Size; i++ {
 		artist := lineup.Artists[i]
 
-		log.Println(artist.Name, artist.Img)
+		log.Println(artist.Day.Month(), artist.Day.Day(), artist.Name, artist.Img)
 	}
 }
