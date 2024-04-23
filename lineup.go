@@ -10,14 +10,14 @@ import (
 	"time"
 
 	"golang.org/x/net/html"
+	"golang.org/x/net/html/atom"
 )
 
 type Artist struct {
-	Day   time.Time `json:"day"`
-	Img   string    `json:"img"`
-	Name  string    `json:"name"`
-	Stage string    `json:"stage"`
-	Time  time.Time `json:"setTime"`
+	Img     string    `json:"img"`
+	Name    string    `json:"name"`
+	Stage   string    `json:"stage"`
+	SetTime time.Time `json:"setTime"`
 }
 
 type Lineup struct {
@@ -29,7 +29,6 @@ const (
 	defaultYear = 2024
 	// defaultTime =
 )
-
 
 // Get()
 //
@@ -79,7 +78,7 @@ func Get(url string) (Lineup, error) {
 // </div>
 func ParseLineup(rawHTML []byte) (Lineup, error) {
 	var lineup Lineup
-	var day time.Time
+	var setTime time.Time
 
 	buff := bytes.NewBuffer(rawHTML)
 
@@ -95,17 +94,16 @@ func ParseLineup(rawHTML []byte) (Lineup, error) {
 		if n.Type == html.ElementNode && n.Data == "div" {
 			for _, a := range n.Attr {
 				if a.Key == "class" && a.Val == "favorite-panel" {
-					day = getDayPerforming(n)
+					setTime = getTimePerforming(n)
 				}
 
 				if a.Key == "class" && a.Val == "favorite-item" {
 
 					artist := Artist{
-						Day:  day,
-						Img:  getArtistImg(n),
-						Name: getArtist(n),
-						// Stage: getStage(n),
-						// Time:  getTimePerforming(n),
+						Img:     getArtistImg(n),
+						Name:    getArtist(n),
+						Stage:   getStage(n),
+						SetTime: setTime,
 					}
 
 					lineup.Artists = append(lineup.Artists, artist)
@@ -181,12 +179,20 @@ func getArtistImg(n *html.Node) string {
 	return imgSrc
 }
 
-func getDayPerforming(n *html.Node) time.Time {
+func getTimePerforming(n *html.Node) time.Time {
 	// verify we are at the right starting point
+	hasAttr := false
+
 	for _, attr := range n.Attr {
-		if attr.Key != "class" && attr.Val != "favorite-panel" {
-			return time.Time{}
+		if attr.Key == "class" && attr.Val == "favorite-panel" {
+			hasAttr = true
+
+			break
 		}
+	}
+
+	if !hasAttr {
+		return time.Time{}
 	}
 
 	// verify we are on the <p> tag
@@ -271,4 +277,89 @@ func getMonth(monthStr string) time.Month {
 	default:
 		return time.Month(0)
 	}
+}
+
+func getStage(n *html.Node) string {
+	// confirm we are at div.favorite-item
+	hasAttr := false
+
+	for _, attr := range n.Attr {
+		if attr.Key == "class" && attr.Val == "favorite-item" {
+			hasAttr = true
+
+			break
+		}
+	}
+
+	if !hasAttr {
+		return ""
+	}
+
+	artistNode := n.FirstChild.NextSibling
+
+	if artistNode == nil {
+		return ""
+	}
+
+	infoNode := artistNode.NextSibling
+
+	if infoNode == nil {
+		return ""
+	}
+
+	infoNode = infoNode.NextSibling
+
+	if infoNode == nil {
+		return ""
+	}
+
+	hasAttr = false
+
+	for _, attr := range infoNode.Attr {
+		if attr.Key == "class" && attr.Val == "favorite-item__info" {
+			hasAttr = true
+
+			break
+		}
+	}
+
+	if !hasAttr {
+		return ""
+	}
+
+	artistNameNode := infoNode.FirstChild
+
+	if artistNameNode == nil {
+		return ""
+	}
+
+	artistNameNode = artistNameNode.NextSibling
+
+	if artistNameNode == nil {
+		return ""
+	}
+
+	stageNode := artistNameNode.NextSibling
+
+	if stageNode == nil {
+		return ""
+	}
+
+	stageNode = stageNode.NextSibling
+
+	if stageNode == nil {
+		return ""
+	}
+
+	if stageNode.DataAtom != atom.P {
+		return ""
+	}
+
+	stageNode = stageNode.FirstChild
+
+	if stageNode == nil {
+		return ""
+	}
+
+	return stageNode.Data
 }

@@ -64,6 +64,6 @@ func printLineup(lineup nyx.Lineup) {
 	for i := 0; i < lineup.Size; i++ {
 		artist := lineup.Artists[i]
 
-		log.Println(artist.Day.Month(), artist.Day.Day(), artist.Name, artist.Img)
+		log.Println(artist.SetTime.Month(), artist.SetTime.Day(), artist.Name, artist.Stage, artist.Img)
 	}
 }
